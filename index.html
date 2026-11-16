@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homework – Contingency Tables, Independence and the χ² Test</title>
+<meta name="description" content="Programmatic construction of a contingency table, marginal and conditional frequencies, expected frequencies under independence, Pearson's chi-square statistic and p-value, with a discussion of association versus causality.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="tip" role="tooltip"></div>
+
+<header class="hero">
+  <p class="kicker">Statistics · Homework</p>
+  <h1>Contingency tables, independence and Pearson’s χ² test</h1>
+  <p class="lead">Given a bivariate categorical dataset (X, F), we build the contingency table programmatically from the raw records,
+  derive marginal and conditional distributions, compute the frequencies expected under independence, and test independence
+  with Pearson’s χ² statistic and its p-value. Everything below is computed live in the browser by the code shown in §7.</p>
+</header>
+
+<nav class="toc" aria-label="Contents">
+  <a href="#theory">1 · Theory</a>
+  <a href="#data">2 · Data</a>
+  <a href="#table">3 · Contingency table</a>
+  <a href="#profiles">4 · Conditional profiles</a>
+  <a href="#chisq">5 · Expected frequencies &amp; χ²</a>
+  <a href="#perm">6 · Permutation check</a>
+  <a href="#discussion">7 · Interpretation &amp; causality</a>
+  <a href="#code">8 · Code</a>
+</nav>
+
+<main>
+
+<!-- ============================ 1. THEORY ============================ -->
+<section id="theory">
+  <h2><span class="num">1</span>Independence: probability and statistics</h2>
+  <p class="sub">The concepts the computations rely on.</p>
+
+  <h3>1.1 Independence of events</h3>
+  <p>In a probability space (Ω, 𝒜, P), two events A and B are <b>independent</b> if</p>
+  <div class="math"><i>P</i>(<i>A</i> ∩ <i>B</i>) = <i>P</i>(<i>A</i>) · <i>P</i>(<i>B</i>).</div>
+  <p>When <i>P</i>(<i>B</i>) &gt; 0 this is equivalent to <i>P</i>(<i>A</i> | <i>B</i>) = <i>P</i>(<i>A</i>):
+  knowing that B occurred does not change the probability of A. Independence is a property of the probability measure,
+  not of the events as sets. It is not the same as being disjoint: two disjoint events with positive probability are always
+  <em>dependent</em>, because if one occurs the other cannot.</p>
+
+  <h3>1.2 Independence of random variables</h3>
+  <p>Two discrete random variables X (values x<sub>1</sub>,…,x<sub>r</sub>) and Y (values y<sub>1</sub>,…,y<sub>c</sub>) are independent iff the joint
+  probability mass function factorises into the product of the marginals for <em>every</em> pair of values:</p>
+  <div class="math">π<sub><i>ij</i></sub> = <i>P</i>(<i>X</i>=<i>x<sub>i</sub></i>, <i>Y</i>=<i>y<sub>j</sub></i>) = π<sub><i>i</i>·</sub> · π<sub>·<i>j</i></sub>
+  &nbsp;&nbsp;∀ <i>i</i>, <i>j</i>,
+  &nbsp;&nbsp;&nbsp;&nbsp; where &nbsp;π<sub><i>i</i>·</sub> = Σ<sub><i>j</i></sub> π<sub><i>ij</i></sub>, &nbsp;π<sub>·<i>j</i></sub> = Σ<sub><i>i</i></sub> π<sub><i>ij</i></sub>.</div>
+  <p>Equivalently, all conditional distributions of Y given X = x<sub>i</sub> are identical, and equal to the marginal of Y:
+  <i>P</i>(<i>Y</i>=<i>y<sub>j</sub></i> | <i>X</i>=<i>x<sub>i</sub></i>) = π<sub>·<i>j</i></sub> for every i. The relation is symmetric: if Y does not depend on X,
+  X does not depend on Y either. Independence implies zero covariance (for numerical variables), but zero correlation does not imply
+  independence, since it captures only linear dependence.</p>
+
+  <h3>1.3 The empirical counterpart: contingency tables</h3>
+  <p>On a sample of <i>n</i> units, the contingency table collects the absolute joint frequencies <i>n<sub>ij</sub></i>, i.e. the number of units with X = x<sub>i</sub> and F = y<sub>j</sub>.
+  From it we get:</p>
+  <ul>
+    <li><b>marginal frequencies</b>: <i>n<sub>i·</sub></i> = Σ<sub>j</sub> <i>n<sub>ij</sub></i> (row totals) and <i>n<sub>·j</sub></i> = Σ<sub>i</sub> <i>n<sub>ij</sub></i> (column totals), plus their relative versions <i>n<sub>i·</sub></i>/<i>n</i>, <i>n<sub>·j</sub></i>/<i>n</i>;</li>
+    <li><b>conditional frequencies</b>: the row profiles <i>f</i>(<i>y<sub>j</sub></i> | <i>x<sub>i</sub></i>) = <i>n<sub>ij</sub></i>/<i>n<sub>i·</sub></i> and the column profiles <i>f</i>(<i>x<sub>i</sub></i> | <i>y<sub>j</sub></i>) = <i>n<sub>ij</sub></i>/<i>n<sub>·j</sub></i>.</li>
+  </ul>
+  <div class="def"><b>Statistical (empirical) independence.</b> X and F are perfectly independent <em>in the sample</em> if all row profiles coincide
+  (and therefore equal the marginal profile of F), which is the same as <i>n<sub>ij</sub></i> = <i>n<sub>i·</sub></i> <i>n<sub>·j</sub></i> / <i>n</i> for every cell.</div>
+  <p>The quantities</p>
+  <div class="math"><i>ñ<sub>ij</sub></i> = <i>n<sub>i·</sub></i> · <i>n<sub>·j</sub></i> / <i>n</i></div>
+  <p>are the <b>expected (theoretical) frequencies under independence</b>. They are the maximum-likelihood estimates of <i>n</i>π<sub><i>ij</i></sub> under
+  H<sub>0</sub>, obtained by plugging the observed marginals into the factorised model of §1.2. With real data we never observe exact equality,
+  so the question becomes how large the gap between <i>n<sub>ij</sub></i> and <i>ñ<sub>ij</sub></i> has to be before it stops looking like sampling noise.</p>
+
+  <h3>1.4 Pearson’s χ² statistic and test</h3>
+  <div class="math">χ² = Σ<sub><i>i</i>=1</sub><sup><i>r</i></sup> Σ<sub><i>j</i>=1</sub><sup><i>c</i></sup> ( <i>n<sub>ij</sub></i> − <i>ñ<sub>ij</sub></i> )² / <i>ñ<sub>ij</sub></i></div>
+  <p>χ² ≥ 0, and it equals 0 iff the sample is perfectly independent. Its maximum is <i>n</i>·(min(<i>r</i>,<i>c</i>) − 1), which motivates the normalised index
+  <b>Cramér’s V</b> = √( χ² / (<i>n</i>(min(<i>r</i>,<i>c</i>)−1)) ) ∈ [0, 1]. V measures the strength of association and, unlike χ², does not grow with sample size.</p>
+  <p><b>Test.</b> H<sub>0</sub>: π<sub><i>ij</i></sub> = π<sub><i>i</i>·</sub>π<sub>·<i>j</i></sub> for all i, j (independence) against H<sub>1</sub>: at least one cell violates the factorisation.
+  Under H<sub>0</sub> and for large <i>n</i>, χ² is asymptotically distributed as a chi-square with</p>
+  <div class="math">ν = (<i>r</i> − 1)(<i>c</i> − 1) &nbsp; degrees of freedom</div>
+  <p>(rc − 1 free cell probabilities minus (r − 1) + (c − 1) estimated marginal parameters). The p-value is
+  <i>p</i> = <i>P</i>(χ²<sub>ν</sub> ≥ χ²<sub>obs</sub>) = 1 − <i>F</i><sub>χ²<sub>ν</sub></sub>(χ²<sub>obs</sub>), computed here through the regularised upper incomplete gamma function
+  <i>Q</i>(ν/2, χ²<sub>obs</sub>/2). We reject H<sub>0</sub> at level α if <i>p</i> &lt; α, equivalently if χ²<sub>obs</sub> &gt; χ²<sub>ν, 1−α</sub>.</p>
+  <p class="note"><b>Assumptions.</b> Units are independent of each other (simple random sampling), each unit falls in exactly one cell, and the expected counts are large enough
+  for the asymptotic approximation to hold. The usual rule of thumb (Cochran) is <i>ñ<sub>ij</sub></i> ≥ 5 in at least 80% of cells and none below 1; otherwise merge categories
+  or use an exact or permutation test (§6). The <b>Pearson residuals</b> <i>e<sub>ij</sub></i> = (<i>n<sub>ij</sub></i> − <i>ñ<sub>ij</sub></i>)/√<i>ñ<sub>ij</sub></i> (with Σ<i>e<sub>ij</sub></i>² = χ²) show <em>which</em> cells drive the result;
+  |<i>e<sub>ij</sub></i>| &gt; 2 is a common flag.</p>
+</section>
+
+<!-- ============================ 2. DATA ============================ -->
+<section id="data">
+  <h2><span class="num">2</span>The dataset (X, F)</h2>
+  <p class="sub">Choose a dataset and the two variables. The default is the passenger and crew list of the RMS Titanic (n = 2201), one record per person.</p>
+  <div class="card">
+    <div class="controls">
+      <label>Dataset
+        <select id="dsSel">
+          <option value="titanic">Titanic — 2201 people (Class, Sex, Age, Survived)</option>
+          <option value="simind">Simulated — independent variables</option>
+          <option value="simdep">Simulated — dependent variables</option>
+          <option value="csv">Your own data (CSV)</option>
+        </select>
+      </label>
+      <label>X (rows)<select id="xSel"></select></label>
+      <label>F (columns)<select id="fSel"></select></label>
+      <label class="simopt">n <input id="simN" type="number" min="20" max="200000" value="600" style="width:100px"></label>
+      <label class="simopt">seed <input id="simSeed" type="number" value="42" style="width:80px"></label>
+      <label>α <select id="alphaSel"><option>0.10</option><option selected>0.05</option><option>0.01</option><option>0.001</option></select></label>
+      <button id="runBtn" type="button">Recompute</button>
+    </div>
+    <div id="csvBox" class="hidden" style="margin-top:14px">
+      <p class="note" style="margin:0 0 6px">Paste a CSV (first row = header, comma/semicolon/tab separated) or load a file. Numeric columns with many distinct values can be binned into quantile classes.</p>
+      <textarea id="csvText" spellcheck="false">smoker,activity
+yes,low
+no,high
+no,medium
+yes,low
+no,high
+yes,medium
+no,medium
+yes,low
+no,high
+no,low
+yes,medium
+no,high</textarea>
+      <div class="controls" style="margin-top:8px">
+        <label>File <input id="csvFile" type="file" accept=".csv,.txt,.tsv"></label>
+        <label class="chk"><input id="binChk" type="checkbox" checked> bin numeric columns into</label>
+        <label><select id="binK"><option>3</option><option selected>4</option><option>5</option></select></label>
+        <button id="csvLoad" class="ghost" type="button">Parse CSV</button>
+      </div>
+    </div>
+    <p id="dsInfo" class="note" style="margin:12px 0 0"></p>
+    <h3 style="margin-top:16px;font-size:15px">First records of the raw dataset</h3>
+    <div class="tblwrap" id="rawPreview"></div>
+  </div>
+</section>
+
+<!-- ============================ 3. TABLE ============================ -->
+<section id="table">
+  <h2><span class="num">3</span>Contingency table, marginal and conditional frequencies</h2>
+  <p class="sub">Built by counting the raw records (see <code>buildContingency</code> in §8). Switch view with the tabs.</p>
+  <div class="card">
+    <div class="tabs" role="tablist" id="ctTabs">
+      <button role="tab" data-v="abs" aria-selected="true">Absolute n<sub>ij</sub></button>
+      <button role="tab" data-v="rel" aria-selected="false">Relative n<sub>ij</sub>/n</button>
+      <button role="tab" data-v="row" aria-selected="false">F | X (row profiles)</button>
+      <button role="tab" data-v="col" aria-selected="false">X | F (column profiles)</button>
+    </div>
+    <div class="tblwrap" id="ctOut"></div>
+    <p class="caption" id="ctCap"></p>
+  </div>
+</section>
+
+<!-- ============================ 4. PROFILES ============================ -->
+<section id="profiles">
+  <h2><span class="num">4</span>Conditional distributions of F given X</h2>
+  <p class="sub">Under independence every bar would look like the bottom “All” bar (the marginal distribution of F). The more the bars differ from it, the stronger the association.</p>
+  <div class="card">
+    <div class="legend" id="profLegend"></div>
+    <svg class="chart" id="profChart" role="img" aria-label="100% stacked bars of the conditional distribution of F for each level of X"></svg>
+  </div>
+</section>
+
+<!-- ============================ 5. CHI-SQUARE ============================ -->
+<section id="chisq">
+  <h2><span class="num">5</span>Expected frequencies under independence and the χ² statistic</h2>
+  <p class="sub">ñ<sub>ij</sub> = n<sub>i·</sub> n<sub>·j</sub> / n, then χ² = Σ (n<sub>ij</sub> − ñ<sub>ij</sub>)² / ñ<sub>ij</sub>.</p>
+  <div class="two">
+    <div class="card"><h3 style="margin-top:0;font-size:15px">Expected frequencies ñ<sub>ij</sub></h3><div class="tblwrap" id="expOut"></div></div>
+    <div class="card"><h3 style="margin-top:0;font-size:15px">Contributions (n<sub>ij</sub> − ñ<sub>ij</sub>)² / ñ<sub>ij</sub></h3><div class="tblwrap" id="contribOut"></div></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;font-size:15px">Pearson residuals e<sub>ij</sub> = (n<sub>ij</sub> − ñ<sub>ij</sub>) / √ñ<sub>ij</sub></h3>
+    <p class="note" style="margin:0 0 8px"><span style="color:var(--div-pos);font-weight:700">Red</span> = more observations than expected under independence,
+      <span style="color:var(--div-neg);font-weight:700">blue</span> = fewer. Colour intensity is proportional to |e<sub>ij</sub>|.</p>
+    <div class="tblwrap" id="residOut"></div>
+  </div>
+  <div class="stats" id="statsOut"></div>
+  <div id="assumpOut"></div>
+  <div id="verdictOut" style="margin-top:12px"></div>
+</section>
+
+<!-- ============================ 6. PERMUTATION ============================ -->
+<section id="perm">
+  <h2><span class="num">6</span>Checking the asymptotic p-value with a permutation test</h2>
+  <p class="sub">Shuffling F across units destroys any link with X while keeping both marginals fixed. This gives a sample from the null distribution of χ² that does not depend on the large-n approximation.</p>
+  <div class="card">
+    <div class="controls" style="margin-bottom:10px">
+      <label>permutations B <select id="permB"><option>500</option><option selected>2000</option><option>5000</option></select></label>
+      <button id="permBtn" class="ghost" type="button">Run permutation test</button>
+      <span id="permRes" class="note"></span>
+    </div>
+    <div class="legend" id="permLegend"></div>
+    <svg class="chart" id="permChart" role="img" aria-label="Histogram of permuted chi-square statistics with theoretical chi-square density"></svg>
+  </div>
+</section>
+
+<!-- ============================ 7. DISCUSSION ============================ -->
+<section id="discussion">
+  <h2><span class="num">7</span>Interpretation and discussion</h2>
+  <div class="card" id="interpOut"></div>
+
+  <div id="titanicDisc">
+  <h3>7.1 Titanic: what the test does and does not say</h3>
+  <p>For <b>Class × Survived</b> the result is unambiguous: χ² ≈ 190.4 on 3 degrees of freedom, with a p-value of order 10<sup>−41</sup> and every expected count well above 5.
+  The hypothesis that survival was independent of class is rejected at any reasonable level. The residuals show where the dependence lies: first-class passengers survived
+  far more often than independence would predict (e ≈ +9.6), while third class and crew survived less (e ≈ −3.3 and −4.4). Cramér’s V ≈ 0.29 indicates a moderate association,
+  so class is clearly not the whole story.</p>
+  <p>It is tempting to conclude that <em>being in first class caused</em> higher survival. The test does not license that conclusion. The stratified tables below repeat the same
+  analysis separately for men and women.</p>
+  <div class="two" id="strataOut"></div>
+  <p>Two things stand out. First, <b>sex</b> is strongly associated with survival (the “women and children first” protocol), and the class groups have very different sex
+  compositions: the crew is about 97% male, while first class is about 45% female. Part of the marginal Class–Survived association is therefore the effect of sex
+  acting through the composition of each class, which makes sex a <b>confounder</b>. Second, within each sex the association with class is still there, but its shape changes:
+  among women the gap is between first/second class (97%, 88%) and third class (46%), while among men first class (34%) stands apart from all the others.
+  Some comparisons even <em>reverse</em> once we condition on sex. Overall, second class survived much more than third (41% vs 25%) and the crew had the lowest rate (24%),
+  yet among men second class did slightly <em>worse</em> than third (14% vs 17%) and male crew did better than both (22%). This is Simpson’s paradox: the marginal ranking
+  is driven by how many women each group contained. Which one is relevant depends on the question being asked, and the χ² test alone cannot answer that.</p>
+  <p>Even the conditional association is not a causal effect. Class is a proxy for several mechanisms the data do not record: cabin location (the third-class
+  accommodation was lower in the ship and further from the boat deck), physical barriers and the order in which crew directed people to the lifeboats, language barriers,
+  family size and nationality. Each of these could link class and survival, and they cannot be separated with a two-way table.</p>
+  </div>
+
+  <h3>7.2 Statistical association is not causality</h3>
+  <ul>
+    <li><b>What χ² measures.</b> It compares the observed joint distribution with the one implied by independence. Rejecting H<sub>0</sub> means the two variables are
+      <em>associated</em> in the population, i.e. the conditional distribution of one changes with the other. The statistic is symmetric in X and F, so it carries
+      no information about direction: “X → F”, “F → X” and “Z → X and Z → F” all produce the same table.</li>
+    <li><b>Why an association can be non-causal.</b> (i) <em>Confounding</em>: a third variable affects both (sex and class above). (ii) <em>Reverse causation</em>:
+      the direction may be the opposite of the one assumed. (iii) <em>Selection bias</em>: conditioning on how units entered the sample can create associations that
+      do not exist in the population (collider bias). (iv) <em>Chance</em>: at α = 0.05, one test in twenty on truly independent variables rejects anyway, which matters when many tables are tested.</li>
+    <li><b>Significance is not strength.</b> The p-value depends on n. With 200,000 records a negligible difference becomes “highly significant”, while a
+      substantial one can be non-significant with 30 records. Report an effect size (Cramér’s V, differences between conditional proportions, odds ratios for 2×2 tables) alongside p.</li>
+    <li><b>Failing to reject is not proof of independence.</b> A large p-value means the data are compatible with H<sub>0</sub>, not that H<sub>0</sub> is true. The test may lack power,
+      and χ² can miss dependence that is diluted across many cells or present only within strata.</li>
+    <li><b>What causal claims require.</b> Randomisation (an experiment assigns X independently of everything else, so a remaining association can be attributed to X),
+      or, with observational data, an explicit causal model (e.g. a DAG) plus adjustment for the confounders it identifies: stratification, Cochran–Mantel–Haenszel tests,
+      log-linear or logistic models. Bradford Hill’s criteria (temporal order, dose–response, consistency, plausible mechanism) also support a causal reading.
+      None of these can be read off a single contingency table.</li>
+  </ul>
+</section>
+
+<!-- ============================ 8. CODE ============================ -->
+<section id="code">
+  <h2><span class="num">8</span>Code</h2>
+  <p class="sub">The functions below are printed from the running script itself (<code>Function.prototype.toString</code>); the full source is in <code>js/stats.js</code>, <code>js/data.js</code> and <code>js/app.js</code>, so what you read is exactly what produced the numbers above.
+  No statistical library is used. The results were cross-checked against <code>scipy.stats.chi2_contingency</code> (Titanic Class × Survived: χ² = 190.401, ν = 3, p = 5.00·10<sup>−41</sup>).</p>
+  <div class="tabs" role="tablist" id="codeTabs"></div>
+  <pre id="codeOut"></pre>
+</section>
+</main>
+
+<footer>
+  Data: Titanic passenger and crew counts by class, sex, age and survival (British Board of Trade inquiry, 1912; distributed as the <code>Titanic</code> table in R’s <code>datasets</code> package).
+  Simulated data are generated with a seeded PRNG, so results are reproducible.
+</footer>
+
+<script src="js/stats.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

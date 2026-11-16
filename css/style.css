@@ -1,0 +1,100 @@
+/* Homework – Contingency tables, independence and the chi-square test */
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f3f2ee;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --accent:#2a78d6;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --div-neg:#2a78d6; --div-mid:#f0efec; --div-pos:#e34948;
+  --good:#006300; --bad:#d03b3b;
+  --code-bg:#f3f2ee;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232321;
+    --ink:#f0efec; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --accent:#3987e5;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
+    --div-neg:#3987e5; --div-mid:#383835; --div-pos:#e66767;
+    --good:#0ca30c; --bad:#e66767;
+    --code-bg:#232321;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--ink);
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header.hero{max-width:980px;margin:0 auto;padding:56px 24px 24px}
+header.hero .kicker{color:var(--muted);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}
+header.hero h1{font-size:clamp(28px,4vw,40px);line-height:1.15;margin:0 0 12px;font-weight:700;letter-spacing:-.01em}
+header.hero p.lead{color:var(--ink-2);font-size:18px;max-width:760px;margin:0}
+nav.toc{max-width:980px;margin:0 auto;padding:0 24px 8px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+nav.toc a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--grid)}
+nav.toc a:hover{color:var(--accent);border-color:var(--accent)}
+main{max-width:980px;margin:0 auto;padding:0 24px 80px}
+section{margin-top:48px}
+h2{font-size:24px;margin:0 0 4px;letter-spacing:-.005em}
+h2 .num{color:var(--muted);font-weight:500;margin-right:8px}
+h3{font-size:18px;margin:28px 0 8px}
+p,li{color:var(--ink)}
+.sub{color:var(--ink-2);margin:0 0 16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin:16px 0}
+.math{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",Georgia,serif;font-size:18px;
+  text-align:center;margin:14px 0;overflow-x:auto;white-space:nowrap}
+.math i{font-style:italic}
+.def{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:16px 0}
+.note{color:var(--ink-2);font-size:14px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px}
+code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow:auto;line-height:1.5;max-height:520px}
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-end}
+.controls label{display:flex;flex-direction:column;font-size:13px;color:var(--ink-2);gap:4px}
+select,input[type=number],input[type=text],textarea,button{font:inherit;font-size:14px;color:var(--ink);
+  background:var(--surface);border:1px solid var(--axis);border-radius:8px;padding:6px 10px}
+textarea{width:100%;min-height:110px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+button{cursor:pointer;background:var(--accent);color:#fff;border-color:transparent;font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--axis);font-weight:500}
+button:hover{filter:brightness(1.07)}
+.hidden{display:none!important}
+.chk{flex-direction:row!important;align-items:center;gap:6px!important}
+/* tables */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 10px}
+.tabs button{background:transparent;color:var(--ink-2);border:1px solid var(--grid);font-weight:500;padding:5px 12px}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.tblwrap{overflow-x:auto}
+table.ct{border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14.5px;margin:4px 0;min-width:340px}
+table.ct th,table.ct td{padding:7px 12px;text-align:right;border-bottom:1px solid var(--grid)}
+table.ct thead th{color:var(--ink-2);font-weight:600;border-bottom:1px solid var(--axis)}
+table.ct tbody th{text-align:left;color:var(--ink-2);font-weight:600}
+table.ct .corner{text-align:left;color:var(--muted);font-weight:500;font-size:13px}
+table.ct .marg{background:var(--surface-2);font-weight:600}
+table.ct tr.total th,table.ct tr.total td{border-top:1px solid var(--axis);border-bottom:none}
+table.ct td.hm{color:var(--ink)}
+.caption{font-size:13px;color:var(--muted);margin:6px 0 0}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:12px 0}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.stat .k{font-size:12.5px;color:var(--ink-2)}
+.stat .v{font-size:24px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
+.verdict{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:10px;border:1px solid var(--border);background:var(--surface)}
+.verdict .ic{font-weight:800;font-size:18px;line-height:1.3}
+.verdict.dep .ic{color:var(--bad)} .verdict.ind .ic{color:var(--good)}
+.warn{color:var(--bad);font-size:14px}
+/* charts */
+.chart{width:100%;overflow:visible}
+.chart text{fill:var(--ink-2);font-size:12px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.chart .axis{stroke:var(--axis)} .chart .gridl{stroke:var(--grid)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink-2);margin:4px 0 6px}
+.legend span.sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+#tip{position:fixed;pointer-events:none;z-index:10;background:var(--ink);color:var(--surface);font-size:12.5px;
+  padding:6px 9px;border-radius:7px;line-height:1.4;opacity:0;transition:opacity .08s;max-width:260px}
+.hit{cursor:default}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+footer{max-width:980px;margin:0 auto;padding:24px;color:var(--muted);font-size:13px;border-top:1px solid var(--grid)}
